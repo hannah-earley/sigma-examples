@@ -1,10 +1,83 @@
-(inh "prelude" ~1 ~2 ~3 ~4)
+(inh "prelude" ~1 ~2 ~3 ~4 ~5)
 (inh "nat" + +' succ zero
            cmp cmp' cmp'ge cmp'ge'
            lt eq gt ge )
 
 (beq var lam app subx)
 (grp (beq ~1@var ~2@lam ~3@app ~4@subx))
+
+(beq reduce reduce')
+(grp
+  (perm* (reduce {~t t} #) (~t [`reduce'var `reduce'lam `reduce'app] t reduce))
+
+    (perm (reduce'var [`reduce `reduce'lam `reduce'app] n `var)
+          (`~1 [`reduce' `reduce'lam' `redap'var'
+                `redap'lam' `redap'app''] {{`var n} #} reduce'var))
+
+    (perm (reduce'lam [`reduce'var `reduce `reduce'app] s `lam)
+          (`reduce'lam' (`reduce s #) reduce'lam))
+    (perm (reduce'lam' (# s' h `reduce') `reduce'lam)
+          (`~2 [`reduce'var `reduce' `redap'var'
+                `redap'lam' `redap'app''] {{`lam s'} h} reduce'lam'))
+
+    (perm (reduce'app [`reduce'var `reduce'lam `reduce] {{~r r} s} `app)
+          (~r [`redap'var `redap'lam `redap'app] {r s} reduce'app))
+      (perm (redap'var [`reduce'app `redap'lam `redap'app] {n s} `var)
+            (`redap'var' (`redap'fin {`var n} s #) redap'var))
+      (perm (redap'var' (# t h `redap'fin') `redap'var)
+            (`~3 [`reduce'var `reduce'lam' `reduce'
+                  `redap'lam' `redap'app''] {t h} redap'var'))
+
+      (perm (redap'lam [`redap'var `reduce'app `redap'app] {q s} `lam)
+            (`redap'lam' (`reduce'beta q s #) redap'lam))
+        (perm (redap'lam' (# t h `reduce'beta') `redap'lam)
+              (`~4 [`reduce'var `reduce'lam' `redap'var'
+                    `reduce' `redap'app''] {t h} redap'lam'))
+
+      (perm (redap'app [`redap'var `redap'lam `reduce'app] {pq s} `app)
+            (`redap'app' (`reduce {`app pq} #) s redap'app))
+        (perm (redap'app' (# o h `reduce') s `redap'app)
+              (`redap'app'' (`redap'fin o s #) h redap'app'))
+        (perm (redap'app'' (# t h' `redap'fin') h `redap'app')
+              (`~5 [`reduce'var `reduce'lam' `redap'var'
+                    `redap'lam' `reduce'] {t {h' h}} redap'app''))
+
+  (perm* (reduce' [`reduce'var `reduce'lam' `redap'var'
+                   `redap'lam' `redap'app''] {t' h} ~h)
+         (# t' {~h h} reduce')))
+
+(beq reduce'beta reduce'beta')
+(grp
+  (perm* (reduce'beta s t #) (`reduce'beta'1 (`prep s #) t reduce'beta))
+  (perm (reduce'beta'1 (# s' `prep') t `reduce'beta)
+        (`reduce'beta'2 (`subst t s' #) reduce'beta'1))
+  (perm (reduce'beta'2 (# u h t `subst') `reduce'beta'1)
+        (`reduce'beta' (`reduce u #) {t h} reduce'beta'2))
+  (perm* (reduce'beta' (# v h' `reduce') h `reduce'beta'2)
+         (# v {h h'} reduce'beta')))
+
+(beq redap'fin redap'fin')
+(grp
+  (perm* (redap'fin {~s s} t #)
+          (~s [`redap'fin'var `redap'fin'lam `redap'fin'app]
+              {s t} redap'fin))
+    (perm (redap'fin'var [`redap'fin `redap'fin'lam `redap'fin'app] {n t} `var)
+          (`redap'fin'var' n (`reduce t #) redap'fin'var))
+      (perm (redap'fin'var' n (# t' h `reduce') `redap'fin'var)
+            (`var [`redap'fin' `redap'fin'lam' `redap'fin'app']
+                  {{`app {{`var n} t'}} h} redap'fin'var'))
+    (perm (redap'fin'lam [`redap'fin'var `redap'fin `redap'fin'app] {s t} `lam)
+          (`redap'fin'lam' (`reduce {`app {{`lam s} t}} #) redap'fin'lam))
+      (perm (redap'fin'lam' (# u h `reduce') `redap'fin'lam)
+            (`lam [`redap'fin'var' `redap'fin' `redap'fin'app']
+                  {u h} redap'fin'lam'))
+    (perm (redap'fin'app [`redap'fin'var `redap'fin'lam `redap'fin] {s t} `app)
+          (`redap'fin'app' {`app s} (`reduce t #) redap'fin'app))
+      (perm (redap'fin'app' s (# t' h `reduce') `redap'fin'app)
+            (`app [`redap'fin'var' `redap'fin'lam' `redap'fin']
+                  {{`app {s t'}} h} redap'fin'app'))
+  (perm* (redap'fin' [`redap'fin'var' `redap'fin'lam' `redap'fin'app'] {u h} ~h)
+         (# u {~h h} redap'fin')))
 
 ;; perform a recursive-descent substitution in a prepped term y (where
 ;; to-be-replaced variables have been marked as subx) for x, return
