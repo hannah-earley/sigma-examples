@@ -3,7 +3,7 @@
            cmp cmp' cmp'ge cmp'ge'
            lt eq gt ge )
 
-(beq var lam app subx)
+(beq var lam app)
 (grp (beq ~1@var ~2@lam ~3@app ~4@subx))
 
 (beq reduce reduce')
@@ -46,7 +46,6 @@
                    `redap'lam' `redap'app''] {t' h} ~h)
          (# t' {~h h} reduce')))
 
-(beq reduce'beta reduce'beta')
 (grp
   (perm* (reduce'beta s t #) (`reduce'beta'1 (`prep s #) t reduce'beta))
   (perm (reduce'beta'1 (# s' `prep') t `reduce'beta)
@@ -56,7 +55,6 @@
   (perm* (reduce'beta' (# v h' `reduce') h `reduce'beta'2)
          (# v {h h'} reduce'beta')))
 
-(beq redap'fin redap'fin')
 (grp
   (perm* (redap'fin {~s s} t #)
           (~s [`redap'fin'var `redap'fin'lam `redap'fin'app]
@@ -82,7 +80,6 @@
 ;; perform a recursive-descent substitution in a prepped term y (where
 ;; to-be-replaced variables have been marked as subx) for x, return
 ;; substitution history
-(beq subst subst')
 (grp
   (perm* (subst x {~y y} #)
          (~y [`subst'var `subst'lam `subst'app `subst'sub] {x y} subst))
@@ -107,7 +104,6 @@
   (perm* (subst' [`subst'var `subst'lam'3 `subst'app' `subst'sub] {z h x} ~y)
          (# z {~y h} x subst')))
 
-(beq shift shift')
 (grp
   (perm* (shift m {~x x} #) (~x [`shift'var `shift'lam `shift'app] {m x} shift))
 
@@ -140,7 +136,6 @@
   (perm* (shift' [`shift'var' `shift'lam' `shift'app' `shift'var'eq] {m x} ~x)
          (# m {~x x} shift')))
 
-(beq prep prep')
 (grp
   (perm* (prep t #) (`prep' (`shift 1 t #) prep))
   (perm* (prep' (# 1 t' `shift') `prep) (# t' prep')))
