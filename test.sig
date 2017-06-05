@@ -1,5 +1,7 @@
 #!/sigma
 
+;; test of syntax highlighting/grammar
+
 (a (*a b*)) ;4 5 6
 
 ; hi

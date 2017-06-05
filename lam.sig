@@ -3,60 +3,36 @@
            cmp cmp' cmp'ge cmp'ge'
            lt eq gt ge )
 
-(beq idx lam app)
+(beq idx lam app subx)
 (grp (beq ~1@idx ~2@lam ~3@app ~4@subx))
 
-;; perform a recursive-descent substitution of index m for x,
-;; remembering that indices increase inside lambdas; also returns
+;; perform a recursive-descent substitution in a prepped term y (where
+;; to-be-replaced variables have been marked as subx) for x, return
 ;; substitution history
 (beq subst subst')
 (grp
-  (perm* (subst m x {~y y} #)
-         (~y [`subst'idx `subst'lam `subst'app] {m x y} subst))
-
-    ;; de Bruijn index
-    (perm (subst'idx [`subst `subst'lam `subst'app] {m x n} `idx)
-          (`subst'idx'sw (`cmp m n #) x subst'idx))
-
-      (perm (subst'idx'sw (# ~m?n m-n `cmp') x `subst'idx)
-            (~m?n [`subst'idx'lt `subst'idx'eq `subst'idx'gt]
-                  {m-n x} subst'idx'sw))
-
-        (perm (subst'idx'lt [`subst'idx'sw `subst'idx'eq `subst'idx'gt]
-                            {m-n x} ~m?n)
-              (~m?n [`subst'idx'ne # `subst'idx'gt] {m-n x} subst'idx'lt))
-
-        (perm (subst'idx'eq [`subst'idx'lt `subst'idx'sw `subst'idx'gt]
-                            {n x} `eq)
-              (`~2 [`subst'idx'ne' `subst'idx'] {x n x} subst'idx'eq))
-        (perm (subst'idx'gt [`subst'idx'lt `subst'idx'eq `subst'idx'sw]
-                            {m-n x} ~m?n)
-              (~m?n [`subst'idx'lt # `subst'idx'ne] {m-n x} subst'idx'gt))
-
-      (perm (subst'idx'ne [`subst'idx'lt # `subst'idx'gt] {m-n x} ~m?n)
-            (`subst'idx'ne' (# ~m?n m-n `cmp') x subst'idx'ne))
-      (perm (subst'idx'ne' (`cmp m n #) x `subst'idx'ne)
-            (`~1 [`subst'idx' `subst'idx'eq] {{`idx n} m x} subst'idx'ne'))
-
-    (perm (subst'idx' [`subst'idx'ne' `subst'idx'eq] {z m x} h)
-          (`idx [`subst' `subst'lam' `subst'app'] {z h m x} subst'idx'))
-
-    ;; lambda
-    (perm (subst'lam [`subst'idx `subst `subst'app] {m x y'} `lam)
-          (`subst'lam' (`subst {`succ m} x y' #) subst'lam))
-    (perm (subst'lam' (# z h {`succ m} x `subst') `subst'lam)
-          (`lam [`subst'idx' `subst' `subst'app']
-                {{`lam z} h m x} subst'lam'))
-
-    ;; application
-    (perm (subst'app [`subst'idx `subst'lam `subst] {m x {y1 y2}} `app)
-          (`subst'app' (`subst m x y1 #) (`subst m x y2 #) subst'app))
-    (perm (subst'app' (# z1 h1 m x `subst') (# z2 h2 m x `subst') `subst'app)
-          (`app [`subst'idx' `subst'lam' `subst']
-                 {{`app {z1 z2}} {h1 h2} m x} subst'app'))
-
-  (perm (subst' [`subst'idx' `subst'lam' `subst'app'] {z h m x} ~h)
-        (# z {~h h} m x subst')))
+  (perm* (subst x {~y y} #)
+         (~y [`subst'idx `subst'lam `subst'app `subst'sub] {x y} subst))
+    (perm (subst'idx [`subst `subst'lam `subst'app `subst'sub] {x n} `idx)
+          (`idx [`subst' `subst'lam'3 `subst'app' `subst'sub] {{`idx n} # x} subst'idx))
+    (perm (subst'lam [`subst'idx `subst `subst'app `subst'sub] {x t} `lam)
+          (`subst'lam'1 (`unshift x #) t subst'lam))
+      (perm (subst'lam'1 (# x' `unshift') t `subst'lam)
+            (`subst'lam'2 (`subst x' t #) subst'lam'1))
+      (perm (subst'lam'2 (# t' h x' `subst') `subst'lam'1)
+            (`subst'lam'3 (# x' `unshift') t' h subst'lam'2))
+      (perm (subst'lam'3 (`unshift x #) t' h `subst'lam'2)
+            (`lam [`subst'idx `subst' `subst'app' `subst'sub]
+                  {{`lam t'} h x} subst'lam'3))
+    (perm (subst'app [`subst'idx `subst'lam `subst `subst'sub] {x {s t}} `app)
+          (`subst'app' (`subst x s #) (`subst x t #) subst'app))
+      (perm (subst'app' (# s' hs x `subst') (# t' ht x `subst') `subst'app)
+            (`app [`subst'idx `subst'lam'3 `subst' `subst'sub]
+                  {{`app {s' t'}} {hs ht} x} subst'app'))
+    (perm (subst'sub [`subst'idx `subst'lam `subst'app `subst] {x #} `subx)
+          (`subx [`subst'idx `subst'lam'3 `subst'app' `subst'] {x # x} subst'sub))
+  (perm* (subst' [`subst'idx `subst'lam'3 `subst'app' `subst'sub] {z h x} ~y)
+         (# z {~y h} x subst')))
 
 (beq shift shift')
 (grp
@@ -91,7 +67,11 @@
   (perm* (shift' [`shift'idx' `shift'lam' `shift'app' `shift'idx'eq] {m x} ~x)
          (# m {~x x} shift')))
 
-(beq unshift unshift')
+(beq prep prep')
+(grp
+  (perm* (prep t #) (`prep' (`shift 1 t #) prep))
+  (perm* (prep' (# 1 t' `shift') `prep) (# t' prep')))
+
 (grp
   (perm* (unshift t #) (`unshift' (# 1 t `shift') unshift))
   (perm* (unshift' (`shift 1 t' #) `unshift) (# t' unshift')))
