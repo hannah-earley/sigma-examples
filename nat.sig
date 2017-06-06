@@ -152,3 +152,20 @@
 (grp
   (perm* (triangle n #) (`triangle' (# n 0 `unpair') triangle))
   (perm* (triangle' (`unpair t #) `triangle) (# t triangle')))
+
+(beq fac fac')
+(grp
+  (perm* (fac {~n n} #) (~n [`fac'0 `fac'n] n fac))
+
+    (perm (fac'0 [`fac `fac'n] # `zero)
+          (`zero [`fac' `fac'2] {1 #} fac'0))
+
+    (perm (fac'n [`fac'0 `fac] n-1 `succ)
+          (`fac'1 (`fac n-1 #) fac'n))
+      (perm (fac'1 (# n-1! n-1 `fac') `fac'n)
+            (`fac'2 (`mul n-1! {`succ n-1} #) fac'1))
+      (perm (fac'2 (# n! {`succ n-1} `mul') `fac'1)
+            (`succ [`fac'0 `fac'] {n! n-1} fac'2))
+
+  (perm* (fac' [`fac'0 `fac'2] {n! n-1} ~n)
+         (# n! {~n n-1} fac')))
