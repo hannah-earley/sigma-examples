@@ -1,3 +1,6 @@
+; bools
+(beq ~1@false ~2@true)
+
 ; list and number sugar
 (beq ~~1@nil ~~2@cons (**) ~~1@zero ~~2@succ)
 (perm (~~1 [f1 . fs] z g) (f1 [g . fs] z ~~1))

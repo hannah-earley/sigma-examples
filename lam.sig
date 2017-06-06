@@ -1,4 +1,4 @@
-(inh "prelude" ~1 ~2 ~3 ~4 ~5)
+(inh "prelude" ~1 ~2 ~3 ~4 ~5 true false)
 (inh "nat" + +' succ zero
            cmp cmp' cmp'ge cmp'ge'
            lt eq gt ge )
@@ -6,45 +6,51 @@
 (beq var lam app)
 (grp (beq ~1@var ~2@lam ~3@app ~4@subx))
 
+; the ~a flag is whether or not HNF has been reached (in the current branch),
+; and thus whether we should reduce the RHSs of applications
 (beq reduce reduce')
 (grp
   (perm* (reduce {~t t} #) (~t [`reduce'var `reduce'lam `reduce'app] t reduce))
 
     (perm (reduce'var [`reduce `reduce'lam `reduce'app] n `var)
           (`~1 [`reduce' `reduce'lam' `redap'var'
-                `redap'lam' `redap'app''] {{`var n} #} reduce'var))
+                `redap'lam' `redap'app''] {{`var n} `false #} reduce'var))
 
     (perm (reduce'lam [`reduce'var `reduce `reduce'app] s `lam)
           (`reduce'lam' (`reduce s #) reduce'lam))
     (perm (reduce'lam' (# s' h `reduce') `reduce'lam)
           (`~2 [`reduce'var `reduce' `redap'var'
-                `redap'lam' `redap'app''] {{`lam s'} h} reduce'lam'))
+                `redap'lam' `redap'app''] {{`lam s'} `false h} reduce'lam'))
 
     (perm (reduce'app [`reduce'var `reduce'lam `reduce] {{~r r} s} `app)
-          (~r [`redap'var `redap'lam `redap'app] {r s} reduce'app))
-      (perm (redap'var [`reduce'app `redap'lam `redap'app] {n s} `var)
-            (`redap'var' (`redap'fin {`var n} s #) redap'var))
-      (perm (redap'var' (# t h `redap'fin') `redap'var)
+          (~r [`redap'var' `redap'lam `redap'app] {r s} reduce'app))
+      (perm (redap'var' [`reduce'app `redap'lam `redap'app] {n s} `var)
             (`~3 [`reduce'var `reduce'lam' `reduce'
-                  `redap'lam' `redap'app''] {t h} redap'var'))
+                  `redap'lam' `redap'app'']
+                 {{`app {{`var n} s}} `false #} redap'var'))
+      ;(perm (redap'var [`reduce'app `redap'lam `redap'app] {n s} `var)
+      ;      (`redap'var' (`redap'fin {`var n} s #) redap'var))
+      ;(perm (redap'var' (# t h `redap'fin') `redap'var)
+      ;      (`~3 [`reduce'var `reduce'lam' `reduce'
+      ;            `redap'lam' `redap'app''] {t h} redap'var'))
 
-      (perm (redap'lam [`redap'var `reduce'app `redap'app] {q s} `lam)
+      (perm (redap'lam [`redap'var' `reduce'app `redap'app] {q s} `lam)
             (`redap'lam' (`reduce'beta q s #) redap'lam))
         (perm (redap'lam' (# t h `reduce'beta') `redap'lam)
               (`~4 [`reduce'var `reduce'lam' `redap'var'
-                    `reduce' `redap'app''] {t h} redap'lam'))
+                    `reduce' `redap'app''] {t `true h} redap'lam'))
 
-      (perm (redap'app [`redap'var `redap'lam `reduce'app] {pq s} `app)
+      (perm (redap'app [`redap'var' `redap'lam `reduce'app] {pq s} `app)
             (`redap'app' (`reduce {`app pq} #) s redap'app))
-        (perm (redap'app' (# o h `reduce') s `redap'app)
-              (`redap'app'' (`redap'fin o s #) h redap'app'))
-        (perm (redap'app'' (# t h' `redap'fin') h `redap'app')
+        (perm (redap'app' (# o {~a h} `reduce') s `redap'app)
+              (`redap'app'' (`redap'fin ~a o s #) h redap'app'))
+        (perm (redap'app'' (# t ~a h' `redap'fin') h `redap'app')
               (`~5 [`reduce'var `reduce'lam' `redap'var'
-                    `redap'lam' `reduce'] {t {h' h}} redap'app''))
+                    `redap'lam' `reduce'] {t ~a {h' h}} redap'app''))
 
   (perm* (reduce' [`reduce'var `reduce'lam' `redap'var'
-                   `redap'lam' `redap'app''] {t' h} ~h)
-         (# t' {~h h} reduce')))
+                   `redap'lam' `redap'app''] {t' ~a h} ~h)
+         (# t' {~a {~h h}} reduce')))
 
 (grp
   (perm* (reduce'beta s t #) (`reduce'beta'1 (`prep s #) t reduce'beta))
@@ -56,8 +62,33 @@
          (# v {h h'} reduce'beta')))
 
 (grp
+  (perm* (redap'fin ~a s t #)
+         (~a [`redap'fin'false `redap'fin'true] {s t} redap'fin))
+    (perm (redap'fin'false [`redap'fin `redap'fin'true] {s t} `false)
+          (`~1 [`redap'fin' `redap'fin'var `redap'fin'lam' `redap'fin'app']
+               {{`app {s t}} `false #} redap'fin'false))
+    (perm (redap'fin'true [`redap'fin'false `redap'fin] {{~s s} t} `true)
+          (~s [`redap'fin'var `redap'fin'lam `redap'fin'app] {s t} redap'fin'true))
+      (perm (redap'fin'var [`redap'fin'true `redap'fin'lam `redap'fin'app] {n t} `var)
+            (`~2 [`redap'fin'false `redap'fin' `redap'fin'lam' `redap'fin'app']
+                 {{`app {{`var n} t}} `true #} redap'fin'var))
+      (perm (redap'fin'lam [`redap'fin'var `redap'fin'true `redap'fin'app] {s t} `lam)
+            (`redap'fin'lam' (`reduce {`app {{`lam s} t}} #) redap'fin'lam))
+        (perm (redap'fin'lam' (# u {~a h} `reduce') `redap'fin'lam)
+              (`~3 [`redap'fin'false `redap'fin'var `redap'fin' `redap'fin'app']
+                   {u ~a h} redap'fin'lam'))
+      (perm (redap'fin'app [`redap'fin'var `redap'fin'lam `redap'fin'true] {s t} `app)
+            (`redap'fin'app' {`app s} (`reduce t #) redap'fin'app))
+        (perm (redap'fin'app' s (# t' h `reduce') `redap'fin'app)
+              (`~4 [`redap'fin'false `redap'fin'var `redap'fin'lam' `redap'fin']
+                   {{`app {s t'}} `true h} redap'fin'app'))
+  (perm* (redap'fin' [`redap'fin'false `redap'fin'var
+                      `redap'fin'lam' `redap'fin'app'] {u ~a h} ~h)
+         (# u ~a {~h h} redap'fin')))
+
+(grp(grp
   (perm* (redap'fin {~s s} t #)
-          (~s [`redap'fin'var `redap'fin'lam `redap'fin'app]
+          (~s ~BREAK~ [`redap'fin'var `redap'fin'lam `redap'fin'app]
               {s t} redap'fin))
     (perm (redap'fin'var [`redap'fin `redap'fin'lam `redap'fin'app] {n t} `var)
           (`redap'fin'var' n (`reduce t #) redap'fin'var))
@@ -75,7 +106,7 @@
             (`app [`redap'fin'var' `redap'fin'lam' `redap'fin']
                   {{`app {s t'}} h} redap'fin'app'))
   (perm* (redap'fin' [`redap'fin'var' `redap'fin'lam' `redap'fin'app'] {u h} ~h)
-         (# u {~h h} redap'fin')))
+         (# u {~h h} redap'fin'))))
 
 ;; perform a recursive-descent substitution in a prepped term y (where
 ;; to-be-replaced variables have been marked as subx) for x, return
