@@ -1,12 +1,9 @@
 (inh* "lam")
+(inh "prelude" false true)
+(inh "nat" zero succ)
 
 ;; convenience function that exploits the interpreter not checking that perms
 ;; are indeed reversible to throw away history information for easier debugging
-;(perm* (evil t #) (`evil' (`eval t #) evil))
-;(perm* (evil' (# n t' h `eval') `evil) (# n t' evil'))
-
-(inh "prelude" false true)
-(inh "nat" zero succ)
 (beq evil evil')
 (grp
   (perm* (evil t #) (`zero [`evil'loop `evil't] {t #} evil))
@@ -82,7 +79,7 @@
 
 ;; logic
 
-(def* ISZERO {lam {app{ {app{ {var 1} {lam FALSE} }} TRUE }} })
+(def* ISZERO? {lam {app{ {app{ {var 1} {lam FALSE} }} TRUE }} })
 (def* IF {lam{lam{lam {app{ {app{ {var 3} {var 2} }} {var 1} }} }}})
 (def* NOT {lam {app{ {app{ {var 1} FALSE }} TRUE }} })
 (def* AND {lam{lam {app{ {app{ {var 2} {var 1} }} {var 2} }} }})
@@ -95,10 +92,10 @@
     {lam {app{ {var 2} {app{ {var 1} {var 1} }} }} } }} })
 
 (def* FAC {app{ Y FAC' }})
-(def* FAC' {lam{lam
+(def* FAC' {lam{lam ;; λ FAC n. (ISZERO? n) ONE (MULT n (FAC (n - 1)))
 {app{
   {app{
-    {app{ ISZERO {var 1} }}
+    {app{ ISZERO? {var 1} }}
     ONE
   }}
   {app{
@@ -106,17 +103,3 @@
     {app{ {var 2} {app{ PRED {var 1} }} }}
   }}
 }} }})
-
-(def* FAC2 {app{ FAC2' FAC2' }})
-(def* FAC2' {lam
-{app{
-  {app{
-    {app{ ISZERO {var 1} }}
-    ONE
-  }}
-  Omega
-  ;{app{
-  ;  {app{ MULT {var 1} }}
-  ;  {app{ {app{ {var 2} {var 2} }} {app{ PRED {var 1} }} }}
-  ;}}
-}} })

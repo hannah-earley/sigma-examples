@@ -23,6 +23,23 @@
   (perm* (+' [`loop `next] {a # c} `zero)
          (# a c +')))
 
+(beq mul2 mul2')
+(grp
+  (perm* (mul2 a {`succ b} #) ; ensure b > 0
+         (`zero [`mul2'sw `mul2's'] {a {`succ b} #} mul2))
+
+  (perm (mul2'sw [`mul2 `mul2's'] {{~a a} b ab} ~ab)
+        (~a [`mul2' `mul2's] {a b {~ab ab}} mul2'sw))
+
+    (perm* (mul2' [`mul2'sw `mul2's] {# b ab} `zero)
+          (# ab b mul2'))
+
+    (perm (mul2's [`mul2' `mul2'sw] {a b ab} `succ)
+          (`mul2's' a (`+ ab b #) mul2's))
+
+      (perm (mul2's' a (# {~ab ab} b `+') `mul2's)
+            (~ab [`mul2 `mul2'sw] {a b ab} mul2's')))
+
 ; ... by retaining one of the arguments in + we can immediately
 ; repurpose it for subtraction without writing a new function!
 ; below, we have wrapped the reverse of ++' in a forward interface --'
@@ -169,3 +186,21 @@
 
   (perm* (fac' [`fac'0 `fac'2] {n! n-1} ~n)
          (# n! {~n n-1} fac')))
+
+
+(beq fac2 fac2')
+(grp
+  (perm* (fac2 {~n n} #) (~n [`fac2'0 `fac2'n] n fac2))
+
+    (perm (fac2'0 [`fac2 `fac2'n] # `zero)
+          (`zero [`fac2' `fac2'2] {1 #} fac2'0))
+
+    (perm (fac2'n [`fac2'0 `fac2] n-1 `succ)
+          (`fac2'1 (`fac2 n-1 #) fac2'n))
+      (perm (fac2'1 (# n-1! n-1 `fac2') `fac2'n)
+            (`fac2'2 (`mul2 n-1! {`succ n-1} #) fac2'1))
+      (perm (fac2'2 (# n! {`succ n-1} `mul2') `fac2'1)
+            (`succ [`fac2'0 `fac2'] {n! n-1} fac2'2))
+
+  (perm* (fac2' [`fac2'0 `fac2'2] {n! n-1} ~n)
+         (# n! {~n n-1} fac2')))
