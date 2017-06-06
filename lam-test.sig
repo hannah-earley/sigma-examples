@@ -2,8 +2,24 @@
 
 ;; convenience function that exploits the interpreter not checking that perms
 ;; are indeed reversible to throw away history information for easier debugging
-(perm* (evil t #) (`evil' (`reduce t #) evil))
-(perm* (evil' (# t' h `reduce') `evil) (# t' evil'))
+;(perm* (evil t #) (`evil' (`eval t #) evil))
+;(perm* (evil' (# n t' h `eval') `evil) (# n t' evil'))
+
+(inh "prelude" false true)
+(inh "nat" zero succ)
+(beq evil evil')
+(grp
+  (perm* (evil t #) (`zero [`evil'loop `evil't] {t #} evil))
+
+  (perm (evil'loop [`evil `evil't] {t n'} ~n)
+        (`evil'red (`reduce t #) {~n n'} evil'loop))
+  (perm (evil'red (# t' h' c? `reduce') n `evil'loop)
+        (c? [`evil' `evil't] {t' n} evil'red))
+
+    (perm (evil't [`evil' `evil'red] {t' n} `true)
+          (`succ [`evil `evil'loop] {t' n} evil't))
+
+  (perm* (evil' [`evil'red `evil't] {t n} `false) (# n t evil')))
 
 ;; https://en.wikipedia.org/wiki/De_Bruijn_index
 (def* wiki
