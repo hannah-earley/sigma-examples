@@ -1,4 +1,4 @@
-(inh "prelude" zero succ)
+(inh "prelude" zero succ nil cons)
 (inh "prelude" ~1 ~2 ~3)
 (beq zero succ)
 
@@ -117,9 +117,15 @@
          (# ~ord res cmp'ge')))
 
 ; (/% a b #) -> (# quotient remainer divisor /%')
+; old precond:
+;; precond: either a and b are *both* zero or *both* non-zero
+;;; note that only non-zero gives a valid result,
+;;; 0 /% 0 is claimed to be 1...
+; new precond: both a,b ≠ 0
 (beq div@/% div'@/%')
 (grp
-  (perm* (div a b #) (`zero [`div'l `div'gt] {a b #} div))
+  (perm* (div {`succ a'} {`succ b'} #)
+         (`zero [`div'l `div'gt] {{`succ a'} {`succ b'} #} div))
   (perm (div'l [`div `div'gt] {r d q'} ~q)
         (`div'sw (`cmp r d #) {~q q'} div'l))
   (perm (div'sw (# ~r?d r-d `cmp') q `div'l)
@@ -204,3 +210,66 @@
 
   (perm* (fac2' [`fac2'0 `fac2'2] {n! n-1} ~n)
          (# n! {~n n-1} fac2')))
+
+; iterative gcd, generates garbage in intermediate quotients
+; note that these quotients are useful for the egcd algorithm,
+;  is there a way to reversibly consume these quotients??
+;  (or at least, do less reversals than gcd-rec does...)
+; if so we can also do fraction simplification cheaply
+;; precond: either m and n are *both* zero or *both* non-zero
+;;; this is inherited from /%...
+(beq gcd gcd')
+(grp
+  (perm* (gcd m n #) (`nil [`gcd'l `gcd'n] {m n # #} gcd))
+
+  (perm (gcd'l [`gcd `gcd'n] {m n k ks} ~k)
+        (`gcd't (`/% m n #) {~k k ks} gcd'l))
+
+  (perm (gcd't (# k {~r r'} n `/%') ks `gcd'l)
+        (~r [`gcd' `gcd'n] {n r' k ks} gcd't))
+
+  (perm (gcd'n [`gcd' `gcd't] {n r' k ks} ~r)
+        (`succ [`gcd `gcd'l] {n {~r r'} k ks} gcd'n))
+
+  (perm* (gcd' [`gcd't `gcd'n] {g # k ks} `zero)
+         (# g [k . ks] gcd')))
+
+; a bit slower than gcd, but no garbage
+; should only be twice as slow????
+;; precond: n = 0 or m ≠ 0
+(beq gcd-rec gcd-rec')
+(grp
+  (perm* (gcd-rec m {~n n'} #) (~n [`gcdr'0 `gcdr's] {m n'} gcd-rec))
+
+    (perm (gcdr'0 [`gcd-rec `gcdr's] {m n'} ~n)
+          (~n [`gcd-rec' `gcdr's3] {m m n'} gcdr'0))
+
+    (perm (gcdr's [`gcdr'0 `gcd-rec] {m n'} ~n)
+           (`gcdr's1 (`/% m {~n n'} #) gcdr's))
+
+      (perm (gcdr's1 (# k r n `/%') `gcdr's)
+            (`gcdr's2 k (`gcd-rec n r #) gcdr's1))
+
+      (perm (gcdr's2 k (# g n r `gcd-rec') `gcdr's1)
+            (`gcdr's3 g (# k r n `/%') gcdr's2))
+
+      (perm (gcdr's3 g (`/% m {~n n'} #) `gcdr's2)
+            (~n [`gcdr'0 `gcd-rec'] {g m n'} gcdr's3))
+
+  (perm* (gcd-rec' [`gcdr'0 `gcdr's3] {g m n'} ~n)
+         (# g m {~n n'} gcd-rec')))
+
+; useful alternate correlate -- to reduce a fraction by the gcd
+; not sure if can get directly from the euclidean algorithm,
+;  here is the naïve version:
+;; precond: p ≠ 0
+;;; note that q = 0 gives an answer, but this is invalid...
+(beq simplify simplify')
+(grp
+  (perm* (simplify p q #) (`simplify'1 (`gcd-rec p q #) simplify))
+
+  (perm (simplify'1 (# r p q `gcd-rec') `simplify)
+        (`simplify' (# p r `mul2') (# q r `mul2') simplify'1))
+
+  (perm* (simplify' (`mul2 p' r #) (`mul2 q' r #) `simplify'1)
+         (# p' q' r simplify')))
